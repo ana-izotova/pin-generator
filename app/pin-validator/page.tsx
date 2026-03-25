@@ -1,5 +1,5 @@
 'use client'
-import { ChangeEvent, useReducer } from 'react'
+import { ChangeEvent, SubmitEvent, useReducer } from 'react'
 import { Pin, ValidationRule } from '@/lib/types'
 import {
   hasAllEven,
@@ -94,7 +94,7 @@ export default function PinValidatorPage() {
     dispatch({ type: 'toggleRule', payload: event.target.name })
   }
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault()
 
     if (pin.length < 3) {
