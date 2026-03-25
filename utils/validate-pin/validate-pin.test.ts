@@ -1,65 +1,106 @@
-import { describe, expect, it } from 'vitest'
-import { isValidPin } from './validate-pin'
+import { describe, expect, it, vi } from 'vitest'
+import { createPinValidator } from './validate-pin'
+import type { ValidationRule } from '@/lib/types'
 
-describe('isValidPin', () => {
-  describe('valid PINs', () => {
-    it.each([
-      '1357',
-      '9080',
-      '0201',
-      '5791',
-      '8642',
-      '1020',
-      '9753'
-    ])('should accept "%s"', (pin) => {
-      expect(isValidPin(pin)).toBe(true)
+describe('createPinValidator', () => {
+  it('returns a function', () => {
+    const validate = createPinValidator([])
+    expect(typeof validate).toBe('function')
+  })
+
+  describe('with no rules', () => {
+    const validate = createPinValidator([])
+
+    it('accepts any pin', () => {
+      expect(validate('1234')).toBe(true)
+      expect(validate('0000')).toBe(true)
+      expect(validate('')).toBe(true)
     })
   })
 
-  describe('consecutive identical digits', () => {
-    it.each([
-      ['1156', '11 at start'],
-      ['0112', '11 in middle'],
-      ['0011', '00 at start and 11'],
-      ['3445', '44 in middle'],
-      ['1233', '33 at end'],
-      ['0000', 'all same']
-    ])('should reject "%s" (%s)', (pin) => {
-      expect(isValidPin(pin)).toBe(false)
+  describe('with a single rule', () => {
+    const rejectIfStartsWithZero: ValidationRule = (pin) => pin.startsWith('0')
+    const validate = createPinValidator([rejectIfStartsWithZero])
+
+    it('rejects pin when the rule returns true (rule detects a problem)', () => {
+      expect(validate('0123')).toBe(false)
+    })
+
+    it('accepts pin when the rule returns false (no problem found)', () => {
+      expect(validate('1234')).toBe(true)
     })
   })
 
-  describe('three consecutive incrementing digits', () => {
-    it.each([
-      ['1236', '123 at start'],
-      ['0123', '012 at start'],
-      ['4567', '456 at start and 567 overlapping'],
-      ['6789', '678 at start and 789 overlapping'],
-      ['0345', '345 at positions 1-3']
-    ])('should reject "%s" (%s)', (pin) => {
-      expect(isValidPin(pin)).toBe(false)
+  describe('with multiple rules', () => {
+    const rejectIfAllSame: ValidationRule = (pin) => new Set([...pin]).size === 1
+    const rejectIfTooShort: ValidationRule = (pin) => pin.length < 4
+
+    const validate = createPinValidator([rejectIfAllSame, rejectIfTooShort])
+
+    it('rejects pin when the first rule triggers', () => {
+      expect(validate('1111')).toBe(false)
+    })
+
+    it('rejects pin when the second rule triggers', () => {
+      expect(validate('12')).toBe(false)
+    })
+
+    it('rejects pin when both rules trigger', () => {
+      expect(validate('1')).toBe(false)
+    })
+
+    it('accepts pin when no rule triggers', () => {
+      expect(validate('1234')).toBe(true)
     })
   })
 
-  describe('edge cases', () => {
-    it('should accept "8901" (9 to 0 is NOT incrementing — no wrap-around)', () => {
-      expect(isValidPin('8901')).toBe(true)
+  describe('short-circuits on first failing rule', () => {
+    it('does not call subsequent rules after one returns true', () => {
+      const firstRule = vi.fn(() => true)
+      const secondRule = vi.fn(() => false)
+
+      const validate = createPinValidator([firstRule, secondRule])
+      validate('1234')
+
+      expect(firstRule).toHaveBeenCalledOnce()
+      expect(secondRule).not.toHaveBeenCalled()
     })
 
-    it('should reject "0120" (0, 1, 2 are three consecutive incrementing digits)', () => {
-      expect(isValidPin('0120')).toBe(false)
-    })
+    it('calls all rules when none trigger', () => {
+      const firstRule = vi.fn(() => false)
+      const secondRule = vi.fn(() => false)
+      const thirdRule = vi.fn(() => false)
 
-    it('should reject "0124" (012 is three consecutive incrementing digits)', () => {
-      expect(isValidPin('0124')).toBe(false)
-    })
+      const validate = createPinValidator([firstRule, secondRule, thirdRule])
+      validate('1234')
 
-    it('should accept "1030" (no rule violated)', () => {
-      expect(isValidPin('1030')).toBe(true)
+      expect(firstRule).toHaveBeenCalledOnce()
+      expect(secondRule).toHaveBeenCalledOnce()
+      expect(thirdRule).toHaveBeenCalledOnce()
     })
+  })
 
-    it('should accept "9876" (decrementing is NOT incrementing)', () => {
-      expect(isValidPin('9876')).toBe(true)
+  describe('passes the pin to each rule', () => {
+    it('calls each rule with the correct pin argument', () => {
+      const rule = vi.fn(() => false)
+      const validate = createPinValidator([rule])
+
+      validate('5678')
+
+      expect(rule).toHaveBeenCalledWith('5678')
+    })
+  })
+
+  describe('returns independent validators', () => {
+    it('creates separate validators with different rule sets', () => {
+      const rejectAll: ValidationRule = () => true
+      const acceptAll: ValidationRule = () => false
+
+      const strict = createPinValidator([rejectAll])
+      const lenient = createPinValidator([acceptAll])
+
+      expect(strict('1234')).toBe(false)
+      expect(lenient('1234')).toBe(true)
     })
   })
 })
