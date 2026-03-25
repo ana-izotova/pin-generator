@@ -56,8 +56,8 @@ export const hasRepeatedPattern: ValidationRule = (pin) => {
       continue
     }
 
-    const chunck = pin.slice(0, i)
-    if (chunck.repeat(pin.length / i) === pin) {
+    const chunk = pin.slice(0, i)
+    if (chunk.repeat(pin.length / i) === pin) {
       return true
     }
   }
