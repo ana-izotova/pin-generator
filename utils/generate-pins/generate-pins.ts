@@ -6,7 +6,6 @@ import {
   isBlackListed,
 } from '@/utils/validate-pin/validation-rules'
 import { createPinValidator } from '@/utils/validate-pin/validate-pin'
-import { shuffle } from '@/utils/shuffle'
 
 const MAX_ATTEMPTS_MULTIPLIER = 100
 
@@ -29,45 +28,28 @@ export const generatePins = ({
  rules = [hasConsecutiveIdenticalDigits, hasConsecutiveIncrementalDigits],
  blackList,
 }: PinGeneratorOptions = {}): Pin[] => {
-  const isValidPin = createPinValidator(rules)
-
-  if (length > 15) {
-    const pins = new Set<Pin>()
-    let attempts = 0
-    const maxAttempts = count * MAX_ATTEMPTS_MULTIPLIER
-
-    while (pins.size < count && attempts < maxAttempts) {
-      const pin = generateRandomPin(length)
-      if (isAcceptablePin(pin, isValidPin, blackList)) {
-        pins.add(pin)
-      }
-      attempts++
-    }
-
-    if (pins.size < count) {
-      throw new Error(
-        `Could only generate ${pins.size} of ${count} requested PINs after ${maxAttempts} attempts`,
-      )
-    }
-
-    return [...pins]
-  }
-
-  const pool: Pin[] = []
   const totalCombinations = 10 ** length
+  const isValidPin = createPinValidator(rules)
+  const pins = new Set<Pin>()
+  let attempts = 0
+  const maxAttempts = count * MAX_ATTEMPTS_MULTIPLIER
 
-  for (let i = 0; i < totalCombinations; i++) {
-    const pin = String(i).padStart(length, '0')
+  while (pins.size < count && attempts < maxAttempts) {
+    const pin = length > 15
+      ? generateRandomPin(length)
+      : Math.floor(Math.random() * totalCombinations).toString().padStart(length, '0')
+
     if (isAcceptablePin(pin, isValidPin, blackList)) {
-      pool.push(pin)
+      pins.add(pin)
     }
+    attempts++
   }
 
-  if (count > pool.length) {
+  if (pins.size < count) {
     throw new Error(
-      `Requested ${count} PINs but only ${pool.length} valid ${length}-digit PINs exist`,
+      `Could only generate ${pins.size} of ${count} requested PINs after ${maxAttempts} attempts`,
     )
   }
 
-  return shuffle(pool).slice(0, count)
+  return [...pins]
 }
