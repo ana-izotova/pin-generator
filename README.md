@@ -16,8 +16,8 @@ npx vitest         # run tests
 ```
 app/
   page.tsx                  # landing page
-  pin-generator/page.tsx    # generate PINs with configurable constraints
-  pin-validator/page.tsx    # validate a PIN against selected rules
+  generate/page.tsx    # generate PINs with configurable constraints
+  validate/page.tsx    # validate a PIN against selected rules
 
 utils/
   generate-pins/            # generation logic + tests

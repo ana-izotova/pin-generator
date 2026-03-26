@@ -1,1 +1,1 @@
-export { isValidPin } from './validate-pin'
+export { createPinValidator } from './validate-pin'

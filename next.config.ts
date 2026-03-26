@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  output: "export",
+  ...(process.env.GITHUB_ACTIONS && { basePath: "/pin-generator" }),
 };
 
 export default nextConfig;
