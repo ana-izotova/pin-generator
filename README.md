@@ -2,6 +2,11 @@
 
 A take-home assignment extension: a UI which generates and validates PINs against configurable rules.
 
+### Deployed
+
+[Pin generator live demo](https://ana-izotova.github.io/pin-generator/)  
+
+
 ### Running locally
 
 ```bash
